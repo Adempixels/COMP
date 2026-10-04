@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ED.PHY&PORT. - Compétences</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f2f4f7;
+      color: #222;
+    }
+
+    header {
+      background: #1f4e8c;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 30px auto;
+      padding: 15px;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    button {
+      background: #1f4e8c;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #163b6b;
+    }
+
+    .logout {
+      background: #555;
+      margin-bottom: 15px;
+    }
+
+    .competence {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #f7f7f7;
+      padding: 14px;
+      margin-top: 10px;
+      border-radius: 10px;
+    }
+
+    .point {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .vert {
+      background: #20a83a;
+    }
+
+    .bleu {
+      background: #168cff;
+    }
+
+    .jaune {
+      background: #ffd21c;
+    }
+
+    .rouge {
+      background: #e53935;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .message {
+      margin-top: 12px;
+      font-weight: bold;
+    }
+
+    .compteur {
+      text-align: right;
+      color: #666;
+      margin-top: 10px;
+    }
+
+    .matiere {
+      text-align: center;
+      font-size: 18px;
+      color: #1f4e8c;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>ED.PHY&PORT.</h1>
+  <p>Suivi des compétences</p>
+</header>
+
+<div class="container">
+
+  <!-- CONNEXION -->
+  <div id="loginPage" class="card">
+
+    <div class="matiere">
+      ED.PHY&PORT.
+    </div>
+
+    <h2>Connexion</h2>
+
+    <input
+      type="text"
+      id="username"
+      placeholder="Identifiant"
+    >
+
+    <input
+      type="password"
+      id="password"
+      placeholder="Mot de passe"
+    >
+
+    <button onclick="connexion()">
+      Se connecter
+    </button>
+
+    <div id="loginMessage" class="message"></div>
+
+  </div>
+
+
+  <!-- ESPACE ELEVE -->
+  <div id="elevePage" class="hidden">
+
+    <button class="logout" onclick="deconnexion()">
+      Déconnexion
+    </button>
+
+    <div class="card">
+
+      <div class="matiere">
+        ED.PHY&PORT.
+      </div>
+
+      <h2 id="eleveTitre"></h2>
+
+      <div id="listeEleve"></div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ESPACE PROF -->
+  <div id="profPage" class="hidden">
+
+    <button class="logout" onclick="deconnexion()">
+      Déconnexion
+    </button>
+
+    <div class="card">
+
+      <div class="matiere">
+        ED.PHY&PORT.
+      </div>
+
+      <h2>Espace professeur</h2>
+
+      <label>Choisir l'élève :</label>
+
+      <select id="eleveSelect" onchange="chargerProf()">
+        <option value="Isaac">Isaac</option>
+        <option value="Kevin">Kevin</option>
+      </select>
+
+      <label>Compétence :</label>
+
+      <input
+        type="text"
+        id="competence"
+        maxlength="150"
+        placeholder="Ex : Réaliser un échauffement"
+      >
+
+      <label>Niveau :</label>
+
+      <select id="couleur">
+
+        <option value="vert">
+          🟢 Vert - Très bonne maîtrise
+        </option>
+
+        <option value="bleu">
+          🔵 Bleu - Bonne maîtrise
+        </option>
+
+        <option value="jaune">
+          🟡 Jaune - Maîtrise fragile
+        </option>
+
+        <option value="rouge">
+          🔴 Rouge - À retravailler
+        </option>
+
+      </select>
+
+      <button onclick="ajouterCompetence()">
+        Ajouter la compétence
+      </button>
+
+      <div id="profMessage" class="message"></div>
+
+      <div id="compteur" class="compteur"></div>
+
+    </div>
+
+
+    <div class="card">
+
+      <h3>Compétences de l'élève</h3>
+
+      <div id="listeProf"></div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script type="module">
+
+  /* =========================
+     FIREBASE
+  ========================= */
+
+  import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    query,
+    where,
+    serverTimestamp
+  }
+    from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+
+  const firebaseConfig = {
+
+    apiKey:
+      "AIzaSyDYpN9rKM1DJqz-PdxQ0g1Zutrzi2jkk7A",
+
+    authDomain:
+      "comp-7a7e7.firebaseapp.com",
+
+    projectId:
+      "comp-7a7e7",
+
+    storageBucket:
+      "comp-7a7e7.firebasestorage.app",
+
+    messagingSenderId:
+      "399175183305",
+
+    appId:
+      "1:399175183305:web:093bcf96c9e2b3d9f35618",
+
+    measurementId:
+      "G-KMRE4WTNMP"
+  };
+
+
+  const app = initializeApp(firebaseConfig);
+
+  const db = getFirestore(app);
+
+
+  /* =========================
+     COMPTES
+  ========================= */
+
+  const comptes = {
+
+    Isaac: {
+      mdp: "12345",
+      role: "eleve"
+    },
+
+    Kevin: {
+      mdp: "12345",
+      role: "eleve"
+    },
+
+    Prof: {
+      mdp: "12345",
+      role: "prof"
+    }
+
+  };
+
+
+  let utilisateurConnecte = null;
+
+
+  /* =========================
+     CONNEXION
+  ========================= */
+
+  window.connexion = async function() {
+
+    const identifiant =
+      document.getElementById("username")
+      .value
+      .trim();
+
+    const mdp =
+      document.getElementById("password")
+      .value;
+
+    const message =
+      document.getElementById("loginMessage");
+
+
+    if (
+      comptes[identifiant] &&
+      comptes[identifiant].mdp === mdp
+    ) {
+
+      utilisateurConnecte = identifiant;
+
+      message.textContent = "";
+
+      document
+        .getElementById("loginPage")
+        .classList.add("hidden");
+
+
+      if (
+        comptes[identifiant].role === "prof"
+      ) {
+
+        document
+          .getElementById("profPage")
+          .classList.remove("hidden");
+
+        await chargerProf();
+
+      } else {
+
+        document
+          .getElementById("elevePage")
+          .classList.remove("hidden");
+
+        document
+          .getElementById("eleveTitre")
+          .textContent =
+          "Compétences de " + identifiant;
+
+        await chargerEleve();
+      }
+
+    } else {
+
+      message.textContent =
+        "❌ Identifiant ou mot de passe incorrect.";
+
+    }
+
+  };
+
+
+  /* =========================
+     DECONNEXION
+  ========================= */
+
+  window.deconnexion = function() {
+
+    utilisateurConnecte = null;
+
+    document
+      .getElementById("profPage")
+      .classList.add("hidden");
+
+    document
+      .getElementById("elevePage")
+      .classList.add("hidden");
+
+    document
+      .getElementById("loginPage")
+      .classList.remove("hidden");
+
+    document
+      .getElementById("username")
+      .value = "";
+
+    document
+      .getElementById("password")
+      .value = "";
+
+  };
+
+
+  /* =========================
+     AJOUTER COMPETENCE
+  ========================= */
+
+  window.ajouterCompetence = async function() {
+
+    if (
+      !utilisateurConnecte ||
+      comptes[utilisateurConnecte].role !== "prof"
+    ) {
+      return;
+    }
+
+
+    const eleve =
+      document
+        .getElementById("eleveSelect")
+        .value;
+
+    const competence =
+      document
+        .getElementById("competence")
+        .value
+        .trim();
+
+    const couleur =
+      document
+        .getElementById("couleur")
+        .value;
+
+    const message =
+      document
+        .getElementById("profMessage");
+
+
+    if (!competence) {
+
+      message.textContent =
+        "❌ Écris une compétence.";
+
+      return;
+    }
+
+
+    /* Vérification des 20 compétences */
+
+    const q = query(
+      collection(db, "competences"),
+      where("eleve", "==", eleve)
+    );
+
+    const resultat =
+      await getDocs(q);
+
+
+    if (resultat.size >= 20) {
+
+      message.textContent =
+        "❌ Maximum de 20 compétences atteint.";
+
+      return;
+    }
+
+
+    /* Enregistrement */
+
+    await addDoc(
+      collection(db, "competences"),
+      {
+
+        eleve: eleve,
+
+        competence: competence,
+
+        couleur: couleur,
+
+        date: serverTimestamp()
+
+      }
+    );
+
+
+    document
+      .getElementById("competence")
+      .value = "";
+
+
+    message.textContent =
+      "✅ Compétence enregistrée !";
+
+
+    await chargerProf();
+
+  };
+
+
+  /* =========================
+     AFFICHAGE PROF
+  ========================= */
+
+  window.chargerProf = async function() {
+
+    const eleve =
+      document
+        .getElementById("eleveSelect")
+        .value;
+
+    const liste =
+      document
+        .getElementById("listeProf");
+
+    liste.innerHTML =
+      "<p>Chargement...</p>";
+
+
+    const q = query(
+      collection(db, "competences"),
+      where("eleve", "==", eleve)
+    );
+
+    const resultat =
+      await getDocs(q);
+
+
+    liste.innerHTML = "";
+
+
+    document
+      .getElementById("compteur")
+      .textContent =
+      resultat.size + " / 20 compétences";
+
+
+    if (resultat.empty) {
+
+      liste.innerHTML =
+        "<p>Aucune compétence pour le moment.</p>";
+
+      return;
+    }
+
+
+    resultat.forEach((doc) => {
+
+      const data =
+        doc.data();
+
+      afficherCompetence(
+        liste,
+        data.competence,
+        data.couleur
+      );
+
+    });
+
+  };
+
+
+  /* =========================
+     AFFICHAGE ELEVE
+  ========================= */
+
+  async function chargerEleve() {
+
+    const liste =
+      document
+        .getElementById("listeEleve");
+
+    liste.innerHTML =
+      "<p>Chargement...</p>";
+
+
+    const q = query(
+      collection(db, "competences"),
+      where(
+        "eleve",
+        "==",
+        utilisateurConnecte
+      )
+    );
+
+
+    const resultat =
+      await getDocs(q);
+
+
+    liste.innerHTML = "";
+
+
+    if (resultat.empty) {
+
+      liste.innerHTML =
+        "<p>Aucune compétence pour le moment.</p>";
+
+      return;
+    }
+
+
+    resultat.forEach((doc) => {
+
+      const data =
+        doc.data();
+
+      afficherCompetence(
+        liste,
+        data.competence,
+        data.couleur
+      );
+
+    });
+
+  }
+
+
+  /* =========================
+     AFFICHER UNE COMPETENCE
+  ========================= */
+
+  function afficherCompetence(
+    zone,
+    texte,
+    couleur
+  ) {
+
+    const bloc =
+      document.createElement("div");
+
+    bloc.className =
+      "competence";
+
+
+    const point =
+      document.createElement("div");
+
+    point.className =
+      "point " + couleur;
+
+
+    const nom =
+      document.createElement("div");
+
+    nom.textContent =
+      texte;
+
+
+    bloc.appendChild(point);
+
+    bloc.appendChild(nom);
+
+    zone.appendChild(bloc);
+
+  }
+
+</script>
+
+</body>
+</html>
